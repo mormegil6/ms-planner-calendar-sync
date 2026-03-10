@@ -118,7 +118,7 @@
                   "poster": "Flow bot",
                   "location": "Channel",
                   "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                  "body/recipient/channelId": "19:9c71b848b0e9473c867f0e409781f404@thread.tacv2",
+                  "body/recipient/channelId": "19:67a3dda93ff74785a24b8e015fc60e8c@thread.tacv2",
                   "body/messageBody": "@outputs('Compose_message')"
                 },
                 "host": {
@@ -184,7 +184,7 @@
                   "poster": "Flow bot",
                   "location": "Channel",
                   "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                  "body/recipient/channelId": "19:9c71b848b0e9473c867f0e409781f404@thread.tacv2",
+                  "body/recipient/channelId": "19:67a3dda93ff74785a24b8e015fc60e8c@thread.tacv2",
                   "body/messageBody": "@outputs('Compose_completion_message')"
                 },
                 "host": {
