@@ -1,4 +1,4 @@
-# KNIDiO Group Calendar Sync
+# KNIDiO Workflows
 
 [![Power Automate](https://img.shields.io/badge/Power%20Automate-Flow-0066FF?logo=powerautomate&logoColor=white)](https://make.powerautomate.com/)
 [![Microsoft Graph](https://img.shields.io/badge/Microsoft%20Graph-API-0078D4?logo=microsoft&logoColor=white)](https://developer.microsoft.com/graph/graph-explorer)
@@ -24,7 +24,7 @@ Power Automate solution that synchronizes Microsoft Planner tasks with an Outloo
 | **Planner ↔ Calendar Sync** | Every 15 min | Syncs Planner tasks with due dates to Outlook calendar. Done tasks marked with ✅ emoji, in-progress tasks with 🔵 emoji. Each event includes task description and a direct link to the Planner task. Auto-creates when task gets due date, updates when details change, deletes when task is removed from plan. |
 | **Calendar Cleanup** | Daily at 03:00 | Removes orphaned synced calendar events when Planner tasks no longer exist or have been deleted. Prevents stale events from accumulating. |
 | **Reset Calendar Sync** | Manual button | Deletes all synced calendar events for a clean rebuild. Use after major Planner restructuring or to start fresh. |
-| **Task Due Date Reminder** | Daily at 09:00 | Posts Teams channel reminder for: (1) assigned tasks missing a due date (excluding Reserve bucket), (2) completed tasks not yet moved to Done bucket. Messages tagged with @Zarząd for visibility. |
+| **Task Due Date Reminder** | Daily at 09:00 | Posts to 🤖 Planner Bot channel: (1) tasks without a due date (excluding Reserve bucket), (2) completed tasks not yet moved to Done bucket. Messages include bucket name and clickable task link. |
 
 ## Architecture
 
@@ -34,7 +34,7 @@ flowchart LR
 	B -->|Create/Update/Delete events| C[Outlook Calendar]
 	D[Calendar Cleanup] -->|Find orphan events| C
 	E[Reset Calendar Sync] -->|Manual reset| C
-	F[Task Due Date Reminder] -->|Post reminder| G[Teams Channel]
+F[Task Due Date Reminder] -->|Post reminder| G[🤖 Planner Bot Channel]
 
 	H[Graph Explorer] -. used for IDs .-> A
 	H -. used for IDs .-> C
@@ -53,6 +53,25 @@ When the **Planner ↔ Calendar Sync** creates or updates an event:
 
 Example: A task "Review budget proposal" marked In Progress appears as event `🔵 Review budget proposal` with description and Planner link.
 
+## Reminder Message Details
+
+When the **Task Due Date Reminder** fires daily at 09:00 CET, it posts HTML-formatted messages to the 🤖 Planner Bot channel:
+
+- **Header**: Bold `🤖 Planner Bot:` prefix
+- **Task title**: In italics for emphasis
+- **Bucket name**: Current column name fetched via ListBuckets API
+- **Task link**: Clickable hyperlink to the Planner task (displayed without `https://` prefix)
+- **Action prompt**: Suggests either adding a due date or moving the task to Reserve/Done bucket
+
+Example (no due date):
+> **🤖 Planner Bot:** Zadanie *Warsztaty z sound designu* nie ma ustawionego terminu wykonania.
+>
+> **Kolumna:** 📋 Do zrobienia
+>
+> **Link do zadania:** [planner.cloud.microsoft/pg.edu.pl/Home/Task/...](https://planner.cloud.microsoft)
+>
+> Proszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny **💡 Rezerwa/zaległe**.
+
 ## Deployment Guide
 
 1. Open the solution folder and replace all placeholder values listed above.
@@ -60,13 +79,14 @@ Example: A task "Review budget proposal" marked In Progress appears as event `�
 3. Go to [Power Apps Solutions](https://make.powerapps.com/) and import the ZIP.
 4. During import, map connection references:
 - Office 365 Outlook
+- Office 365 Groups
 - Planner
 - Teams
 5. Enable all imported flows in [Power Automate](https://make.powerautomate.com/).
 6. Run a manual smoke test:
 - Trigger **Reset Calendar Sync** once (optional, clean start).
 - Wait for **Planner ↔ Calendar Sync** to run.
-- Verify events in Outlook calendar and reminders in Teams channel.
+- Verify events in Outlook calendar and reminders in the 🤖 Planner Bot channel.
 
 ## Where To Get Required IDs
 
@@ -107,7 +127,9 @@ Keep real tenant identifiers in private configuration or local-only working copi
 | Flow import asks for missing connections | Connection references not mapped | Map Outlook, Planner, and Teams connections during import. |
 | Sync flow runs but no events are created | Missing due dates or wrong IDs | Verify `YOUR_PLAN_ID`, `YOUR_CALENDAR_ID`, and that tasks have `dueDateTime`. |
 | Cleanup deletes too much or too little | Wrong calendar ID or stale placeholders | Re-check placeholder replacement and confirm target calendar with Graph `/me/calendars`. |
-| Reminder flow does not post to Teams | Wrong team/channel ID or permissions | Validate `YOUR_GROUP_OR_TEAM_ID` and `YOUR_CHANNEL_ID`; test connector access in Power Automate. |
+| Reminder flow does not post to Teams | Wrong team/channel ID or permissions | Validate `YOUR_GROUP_OR_TEAM_ID` and `YOUR_CHANNEL_ID`; use Graph `GET /teams/{groupId}/channels` to list correct channel IDs. |
+| Reminder says `GetBucket` not found | Planner API has no GetBucket operation | Ensure reminder flow uses `ListBuckets` + Filter Array to look up bucket names. |
+| ZIP imports but solution.xml missing | Files nested under a subfolder | ZIP must have `solution.xml`, `customizations.xml`, `[Content_Types].xml` at root, not in a subfolder. |
 | Push to GitLab is rejected | Remote changed since last push | Run `git pull origin main --rebase`, resolve conflicts, then push again. |
 
 ## Handy Validation Checklist
@@ -115,7 +137,8 @@ Keep real tenant identifiers in private configuration or local-only working copi
 - Confirm no `YOUR_*` placeholders remain before production import.
 - Verify all four flows are turned on after import.
 - Create a test Planner task with a due date and confirm calendar sync.
-- Mark a task complete outside Done bucket and confirm Teams reminder.
+- Mark a task complete outside Done bucket and confirm Teams reminder in 🤖 Planner Bot channel.
+- Verify reminder messages show bucket name and clickable task link.
 
 ## License
 
