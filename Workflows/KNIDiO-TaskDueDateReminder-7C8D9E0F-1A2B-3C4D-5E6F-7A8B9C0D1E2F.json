@@ -104,7 +104,7 @@
                 ]
               },
               "type": "Compose",
-              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_task_no_due_date')?['title'], '** nie ma ustawionego terminu wykonania.<br><br>**Kolumna:** ', first(body('Filter_matching_bucket'))?['name'], '<br><br>**Link do zadania:**<br>https://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '<br><br>Proszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny **💡 Rezerwa/zaległe**.')"
+              "inputs": "@concat('<strong>🤖 Planner Bot:</strong> Zadanie <em>', items('Apply_to_each_task_no_due_date')?['title'], '</em> nie ma ustawionego terminu wykonania.<br><br><strong>Kolumna:</strong> ', first(body('Filter_matching_bucket'))?['name'], '<br><br><strong>Link do zadania:</strong> <a href=\"https://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '\">planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '</a><br><br>Proszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny <strong>💡 Rezerwa/zaległe</strong>.')"
             },
             "Send_Teams_reminder": {
               "runAfter": {
@@ -170,7 +170,7 @@
                 ]
               },
               "type": "Compose",
-              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_completed_task')?['title'], '** zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w niewłaściwej kolumnie.<br><br>**Aktualna kolumna:** ', first(body('Filter_completed_bucket'))?['name'], '<br><br>**Link do zadania:**<br>https://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '<br><br>Proszę przenieść je do kolumny **✅ Zrobione**.')"
+              "inputs": "@concat('<strong>🤖 Planner Bot:</strong> Zadanie <em>', items('Apply_to_each_completed_task')?['title'], '</em> zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w niewłaściwej kolumnie.<br><br><strong>Aktualna kolumna:</strong> ', first(body('Filter_completed_bucket'))?['name'], '<br><br><strong>Link do zadania:</strong> <a href=\"https://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '\">planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '</a><br><br>Proszę przenieść je do kolumny <strong>✅ Zrobione</strong>.')"
             },
             "Send_completion_reminder": {
               "runAfter": {
