@@ -262,7 +262,7 @@
             }
           },
           "runAfter": {
-            "Apply_to_each_task_no_due_date": [
+            "Filter_completed_tasks_in_wrong_bucket": [
               "Succeeded"
             ]
           },
