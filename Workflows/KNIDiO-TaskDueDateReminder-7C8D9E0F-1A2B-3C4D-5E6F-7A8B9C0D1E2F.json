@@ -148,13 +148,15 @@
                   "type": "OpenApiConnection",
                   "inputs": {
                     "parameters": {
-                      "team_id": "YOUR_GROUP_OR_TEAM_ID",
-                      "channel_id": "YOUR_CHANNEL_ID",
+                      "poster": "Flow bot",
+                      "location": "Channel",
+                      "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
+                      "body/recipient/channelId": "YOUR_CHANNEL_ID",
                       "body/messageBody": "@outputs('Compose_message')"
                     },
                     "host": {
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-                      "operationId": "PostMessageToTeamChannel",
+                      "operationId": "PostMessageToConversation",
                       "connectionName": "shared_teams"
                     }
                   }
@@ -244,13 +246,15 @@
                   "type": "OpenApiConnection",
                   "inputs": {
                     "parameters": {
-                      "team_id": "YOUR_GROUP_OR_TEAM_ID",
-                      "channel_id": "YOUR_CHANNEL_ID",
+                      "poster": "Flow bot",
+                      "location": "Channel",
+                      "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
+                      "body/recipient/channelId": "YOUR_CHANNEL_ID",
                       "body/messageBody": "@outputs('Compose_completion_message')"
                     },
                     "host": {
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-                      "operationId": "PostMessageToTeamChannel",
+                      "operationId": "PostMessageToConversation",
                       "connectionName": "shared_teams"
                     }
                   }
