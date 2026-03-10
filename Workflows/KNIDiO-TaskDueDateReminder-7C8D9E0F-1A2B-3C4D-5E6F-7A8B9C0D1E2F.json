@@ -87,9 +87,27 @@
         "Apply_to_each_task_no_due_date": {
           "foreach": "@body('Filter_tasks_without_due_date')",
           "actions": {
+            "Get_bucket_details": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@items('Apply_to_each_task_no_due_date')?['bucketId']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+                  "operationId": "GetBucket",
+                  "connectionName": "shared_planner"
+                }
+              }
+            },
             "Compose_message": {
+              "runAfter": {
+                "Get_bucket_details": [
+                  "Succeeded"
+                ]
+              },
               "type": "Compose",
-              "inputs": "@concat('[Wiadomość automatyczna] 📌 @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_task_no_due_date')?['title'], '\" nie ma ustawionego terminu wykonania. Proszę dodaj termin do tego zadania w Plannerze.')"
+              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_task_no_due_date')?['title'], '** nie ma ustawionego terminu wykonania.\\n\\n**Kolumna:** ', outputs('Get_bucket_details')?['body/name'], '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '\\n\\nProszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny **💡 Rezerwa/zaległe**.')"
             },
             "Send_Teams_reminder": {
               "runAfter": {
@@ -103,7 +121,7 @@
                   "poster": "Flow bot",
                   "location": "Channel",
                   "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                  "body/recipient/channelId": "YOUR_CHANNEL_ID",
+                  "body/recipient/channelId": "19:9c71b848b0e9473c867f0e409781f404@thread.tacv2",
                   "body/messageBody": "@outputs('Compose_message')"
                 },
                 "host": {
@@ -141,9 +159,27 @@
         "Apply_to_each_completed_task": {
           "foreach": "@body('Filter_completed_tasks_in_wrong_bucket')",
           "actions": {
+            "Get_completed_bucket_details": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@items('Apply_to_each_completed_task')?['bucketId']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+                  "operationId": "GetBucket",
+                  "connectionName": "shared_planner"
+                }
+              }
+            },
             "Compose_completion_message": {
+              "runAfter": {
+                "Get_completed_bucket_details": [
+                  "Succeeded"
+                ]
+              },
               "type": "Compose",
-              "inputs": "@concat('[Wiadomość automatyczna] ✅ @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_completed_task')?['title'], '\" zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w innej kolumnie. Proszę przenieś je do \"✅ Zrobione\" w Plannerze.')"
+              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_completed_task')?['title'], '** zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w niewłaściwej kolumnie.\\n\\n**Aktualna kolumna:** ', outputs('Get_completed_bucket_details')?['body/name'], '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '\\n\\nProszę przenieść je do kolumny **✅ Zrobione**.')"
             },
             "Send_completion_reminder": {
               "runAfter": {
@@ -157,7 +193,7 @@
                   "poster": "Flow bot",
                   "location": "Channel",
                   "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                  "body/recipient/channelId": "YOUR_CHANNEL_ID",
+                  "body/recipient/channelId": "19:9c71b848b0e9473c867f0e409781f404@thread.tacv2",
                   "body/messageBody": "@outputs('Compose_completion_message')"
                 },
                 "host": {
