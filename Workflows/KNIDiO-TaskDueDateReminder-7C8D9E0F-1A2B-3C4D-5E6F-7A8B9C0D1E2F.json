@@ -90,18 +90,21 @@
         "Apply_to_each_task_no_due_date": {
           "foreach": "@body('Filter_tasks_without_due_date')",
           "actions": {
-            "Find_bucket_name": {
-              "type": "Compose",
-              "inputs": "@first(filter(body('List_buckets')?['value'], item => equals(item['id'], items('Apply_to_each_task_no_due_date')?['bucketId'])))?['name']"
+            "Filter_matching_bucket": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('List_buckets')?['value']",
+                "where": "@equals(item()?['id'], items('Apply_to_each_task_no_due_date')?['bucketId'])"
+              }
             },
             "Compose_message": {
               "runAfter": {
-                "Find_bucket_name": [
+                "Filter_matching_bucket": [
                   "Succeeded"
                 ]
               },
               "type": "Compose",
-              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_task_no_due_date')?['title'], '** nie ma ustawionego terminu wykonania.\\n\\n**Kolumna:** ', outputs('Find_bucket_name'), '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '\\n\\nProszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny **💡 Rezerwa/zaległe**.')"
+              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_task_no_due_date')?['title'], '** nie ma ustawionego terminu wykonania.\\n\\n**Kolumna:** ', first(body('Filter_matching_bucket'))?['name'], '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task_no_due_date')?['id'], '\\n\\nProszę dodać termin wykonania do tego zadania lub cofnąć ją do kolumny **💡 Rezerwa/zaległe**.')"
             },
             "Send_Teams_reminder": {
               "runAfter": {
@@ -153,18 +156,21 @@
         "Apply_to_each_completed_task": {
           "foreach": "@body('Filter_completed_tasks_in_wrong_bucket')",
           "actions": {
-            "Find_completed_bucket_name": {
-              "type": "Compose",
-              "inputs": "@first(filter(body('List_buckets')?['value'], item => equals(item['id'], items('Apply_to_each_completed_task')?['bucketId'])))?['name']"
+            "Filter_completed_bucket": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('List_buckets')?['value']",
+                "where": "@equals(item()?['id'], items('Apply_to_each_completed_task')?['bucketId'])"
+              }
             },
             "Compose_completion_message": {
               "runAfter": {
-                "Find_completed_bucket_name": [
+                "Filter_completed_bucket": [
                   "Succeeded"
                 ]
               },
               "type": "Compose",
-              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_completed_task')?['title'], '** zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w niewłaściwej kolumnie.\\n\\n**Aktualna kolumna:** ', outputs('Find_completed_bucket_name'), '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '\\n\\nProszę przenieść je do kolumny **✅ Zrobione**.')"
+              "inputs": "@concat('🤖 Planner Bot: Zadanie **', items('Apply_to_each_completed_task')?['title'], '** zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w niewłaściwej kolumnie.\\n\\n**Aktualna kolumna:** ', first(body('Filter_completed_bucket'))?['name'], '\\n\\n**Link do zadania:**\\nhttps://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_completed_task')?['id'], '\\n\\nProszę przenieść je do kolumny **✅ Zrobione**.')"
             },
             "Send_completion_reminder": {
               "runAfter": {
