@@ -19,12 +19,12 @@ Power Automate solution that synchronizes Microsoft Planner tasks with an Outloo
 
 ## What This Solution Includes
 
-| Flow | Trigger | Purpose |
+| Flow | Trigger | Purpose & Behavior |
 |---|---|---|
-| **Planner ↔ Calendar Sync** | Every 15 min | Syncs Planner tasks with due dates to Outlook calendar events (create/update/delete). |
-| **Calendar Cleanup** | Daily at 03:00 | Removes orphaned synced calendar events when Planner tasks no longer exist. |
-| **Reset Calendar Sync** | Manual button | Deletes all synced calendar events for a clean rebuild. |
-| **Task Due Date Reminder** | Daily at 09:00 | Posts Teams channel reminders for assigned tasks with no due date and completed tasks outside the Done bucket. |
+| **Planner ↔ Calendar Sync** | Every 15 min | Syncs Planner tasks with due dates to Outlook calendar. Done tasks marked with ✅ emoji, in-progress tasks with 🔵 emoji. Each event includes task description and a direct link to the Planner task. Auto-creates when task gets due date, updates when details change, deletes when task is removed from plan. |
+| **Calendar Cleanup** | Daily at 03:00 | Removes orphaned synced calendar events when Planner tasks no longer exist or have been deleted. Prevents stale events from accumulating. |
+| **Reset Calendar Sync** | Manual button | Deletes all synced calendar events for a clean rebuild. Use after major Planner restructuring or to start fresh. |
+| **Task Due Date Reminder** | Daily at 09:00 | Posts Teams channel reminder for: (1) assigned tasks missing a due date (excluding Reserve bucket), (2) completed tasks not yet moved to Done bucket. Messages tagged with @Zarząd for visibility. |
 
 ## Architecture
 
@@ -40,18 +40,18 @@ flowchart LR
 	H -. used for IDs .-> C
 ```
 
-## Placeholders You Must Replace
+## Calendar Event Details
 
-Update values in `Workflows/*.json` before import:
+When the **Planner ↔ Calendar Sync** creates or updates an event:
 
-| Placeholder | Meaning |
-|---|---|
-| `YOUR_GROUP_OR_TEAM_ID` | Microsoft 365 Group / Teams Team GUID |
-| `YOUR_PLAN_ID` | Planner plan ID |
-| `YOUR_CALENDAR_ID` | Outlook calendar ID (Exchange/Graph identifier) |
-| `YOUR_CHANNEL_ID` | Teams channel ID for reminder messages |
-| `YOUR_DONE_BUCKET_ID` | Planner bucket ID for `✅ Zrobione` |
-| `YOUR_RESERVE_BUCKET_ID` | Planner bucket ID for `💡 Rezerwa/zaległe` |
+- **Event Title**: Task title prefixed with emoji indicator:
+  - `✅ Task Name` — Task is marked Complete in Planner
+  - `🔵 Task Name` — Task is still In Progress in Planner
+- **Event Description**: Full task description from Planner (if provided)
+- **Event Body Link**: Direct hyperlink to the Planner task (clickable from calendar)
+- **Event Time**: Based on task due date (all-day event)
+
+Example: A task "Review budget proposal" marked In Progress appears as event `🔵 Review budget proposal` with description and Planner link.
 
 ## Deployment Guide
 
