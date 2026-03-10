@@ -1,0 +1,11 @@
+<savingrule savingruleid="eeddff1f-2f1b-f111-8341-7ced8d8db1d3">
+  <iscustomizable>1</iscustomizable>
+  <ruledata>{"time":{"valueInSeconds":60,"frequency":"run"}}</ruledata>
+  <startedon>3/8/2026 8:41:04 PM</startedon>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <timezoneruleversionnumber>4</timezoneruleversionnumber>
+  <workflowid>
+    <workflowid>a1b2c3d4-e5f6-7890-abcd-ef1234567890</workflowid>
+  </workflowid>
+</savingrule>

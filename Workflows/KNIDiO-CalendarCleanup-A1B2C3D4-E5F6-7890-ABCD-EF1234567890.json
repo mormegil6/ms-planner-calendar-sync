@@ -1,0 +1,304 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_planner": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedplanner_0a21b"
+        },
+        "api": {
+          "name": "shared_planner"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_b355d"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Central European Standard Time",
+            "schedule": {
+              "hours": [
+                "3"
+              ]
+            }
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "List_tasks_in_plan": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "b2000000-0002-0001-0001-000000000001"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "groupId": "YOUR_GROUP_OR_TEAM_ID",
+              "id": "YOUR_PLAN_ID"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+              "operationId": "ListTasks_V3",
+              "connectionName": "shared_planner"
+            }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Select_Task_Ids": {
+          "runAfter": {
+            "List_tasks_in_plan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@outputs('List_tasks_in_plan')?['body/value']",
+            "select": "@item()?['id']"
+          }
+        },
+        "Parse_events_response": {
+          "runAfter": {
+            "Send_an_HTTP_request": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Send_an_HTTP_request')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Filter_synced_events": {
+          "runAfter": {
+            "Parse_events_response": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Parse_events_response')?['value']",
+            "where": "@and(contains(coalesce(item()?['subject'], ''), 'Zadanie'), contains(coalesce(item()?['body']?['content'], ''), '/Home/Task/'))"
+          }
+        },
+        "Initialize_Deleted_Count": {
+          "runAfter": {
+            "Filter_synced_events": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DeletedCount",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Apply_to_each_synced_event": {
+          "foreach": "@body('Filter_synced_events')",
+          "actions": {
+            "Compose_Extract_TaskId": {
+              "type": "Compose",
+              "inputs": "@first(split(last(split(coalesce(items('Apply_to_each_synced_event')?['body']?['content'], ''), '/Home/Task/')), '\"'))"
+            },
+            "Condition_task_still_exists": {
+              "actions": {},
+              "runAfter": {
+                "Compose_Extract_TaskId": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Condition_not_already_cancelled": {
+                    "actions": {
+                      "Increment_Deleted_-_orphaned": {
+                        "runAfter": {
+                          "Delete_orphaned_event": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "IncrementVariable",
+                        "inputs": {
+                          "name": "DeletedCount",
+                          "value": 1
+                        }
+                      },
+                      "Delete_orphaned_event": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "calendar": "YOUR_CALENDAR_ID",
+                            "event": "@items('Apply_to_each_synced_event')?['id']"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "CalendarDeleteItem_V2",
+                            "connectionName": "shared_office365"
+                          }
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {
+                        "Delete_event": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "calendar": "YOUR_CALENDAR_ID",
+                              "event": "@items('Apply_to_each_synced_event')?['id']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                              "operationId": "CalendarDeleteItem_V2",
+                              "connectionName": "shared_office365"
+                            }
+                          }
+                        },
+                        "Increment_Deleted": {
+                          "runAfter": {
+                            "Delete_event": [
+                              "Succeeded"
+                            ]
+                          },
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "DeletedCount",
+                            "value": 1
+                          }
+                        }
+                      }
+                    },
+                    "expression": {
+                      "and": [
+                        {
+                          "not": {
+                            "contains": [
+                              "@coalesce(items('Apply_to_each_synced_event')?['subject'], '')",
+                              "❌"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "contains": [
+                      "@body('Select_Task_Ids')",
+                      "@outputs('Compose_Extract_TaskId')"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Initialize_Deleted_Count": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Compose_Summary": {
+          "runAfter": {
+            "Apply_to_each_synced_event": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@concat('✅ Czyszczenie zakończone. Usunięto wydarzeń: ', string(variables('DeletedCount')), ' z ', string(length(body('Filter_synced_events'))), ' sprawdzonych.')"
+        },
+        "Send_an_HTTP_request": {
+          "runAfter": {
+            "Select_Task_Ids": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "Uri": "https://graph.microsoft.com/v1.0/me/calendars/YOUR_CALENDAR_ID/events?$top=999&$select=id,subject,body,isCancelled",
+              "Method": "GET",
+              "ContentType": "application/json"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "operationId": "HttpRequest",
+              "connectionName": "shared_office365"
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,366 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_planner": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedplanner_0a21b"
+        },
+        "api": {
+          "name": "shared_planner"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_b355d"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      },
+      "shared_office365groups": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365groups_20ddb"
+        },
+        "api": {
+          "name": "shared_office365groups"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence_-_sync_every_15_minutes": {
+          "recurrence": {
+            "interval": 15,
+            "frequency": "Minute"
+          },
+          "metadata": {
+            "operationMetadataId": "72e1b66a-3dbe-4056-a2bb-52d9877cb6ce"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "List_tasks_in_plan": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a1000000-0001-0001-0001-000000000001"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "groupId": "YOUR_GROUP_OR_TEAM_ID",
+              "id": "YOUR_PLAN_ID"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+              "operationId": "ListTasks_V3",
+              "connectionName": "shared_planner"
+            }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Get_calendar_events_via_HTTP": {
+          "runAfter": {
+            "List_tasks_in_plan": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "Uri": "https://graph.microsoft.com/v1.0/me/calendars/YOUR_CALENDAR_ID/events?$top=999&$select=id,subject,body",
+              "Method": "GET",
+              "ContentType": "application/json"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "operationId": "HttpRequest",
+              "connectionName": "shared_office365"
+            }
+          }
+        },
+        "Parse_events_response": {
+          "runAfter": {
+            "Get_calendar_events_via_HTTP": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_calendar_events_via_HTTP')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "object",
+                        "properties": {
+                          "contentType": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Apply_to_each_task": {
+          "foreach": "@outputs('List_tasks_in_plan')?['body/value']",
+          "actions": {
+            "Get_task_details": {
+              "metadata": {
+                "operationMetadataId": "eb38cd5e-a787-4fbe-9b7c-6c065305a8aa"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@items('Apply_to_each_task')?['id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+                  "operationId": "GetTaskDetails_V2",
+                  "connectionName": "shared_planner"
+                }
+              }
+            },
+            "Filter_matching_events": {
+              "runAfter": {
+                "Get_task_details": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@body('Parse_events_response')?['value']",
+                "where": "@contains(coalesce(item()?['body']?['content'], ''), concat('/Home/Task/', items('Apply_to_each_task')?['id']))"
+              }
+            },
+            "Compose_EventId": {
+              "runAfter": {
+                "Filter_matching_events": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@if(equals(length(body('Filter_matching_events')), 0), '', first(body('Filter_matching_events'))?['id'])"
+            },
+            "Condition_-_has_due_date": {
+              "actions": {
+                "Compose_Subject": {
+                  "type": "Compose",
+                  "inputs": "@if(equals(int(coalesce(items('Apply_to_each_task')?['percentComplete'], 0)), 100), concat('✅ Zadanie - ', items('Apply_to_each_task')?['title']), concat('🔵 Zadanie - ', items('Apply_to_each_task')?['title']))"
+                },
+                "Compose_Description": {
+                  "runAfter": {
+                    "Compose_Subject": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@concat(coalesce(outputs('Get_task_details')?['body/description'], ''), '<br><br>📋 Zadanie w Plannerze: <a href=\"https://planner.cloud.microsoft/pg.edu.pl/Home/Task/', items('Apply_to_each_task')?['id'], '\">Otwórz zadanie</a>')"
+                },
+                "Condition_-_event_exists": {
+                  "actions": {
+                    "Update_event_(V4)": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "table": "YOUR_CALENDAR_ID",
+                          "id": "@outputs('Compose_EventId')",
+                          "item/subject": "@outputs('Compose_Subject')",
+                          "item/start": "@formatDateTime(items('Apply_to_each_task')?['dueDateTime'], 'yyyy-MM-ddT00:00:00')",
+                          "item/end": "@formatDateTime(addDays(items('Apply_to_each_task')?['dueDateTime'], 1), 'yyyy-MM-ddT00:00:00')",
+                          "item/timeZone": "(UTC+01:00) Sarajevo, Skopje, Warsaw, Zagreb",
+                          "item/body": "<p class=\"editor-paragraph\">@{outputs('Compose_Description')}</p>",
+                          "item/isAllDay": true,
+                          "item/showAs": "busy"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                          "operationId": "V4CalendarPatchItem",
+                          "connectionName": "shared_office365"
+                        }
+                      }
+                    },
+                    "Recreate_event_if_update_failed_(V4)": {
+                      "runAfter": {
+                        "Update_event_(V4)": [
+                          "Failed",
+                          "TimedOut"
+                        ]
+                      },
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "table": "YOUR_CALENDAR_ID",
+                          "item/subject": "@outputs('Compose_Subject')",
+                          "item/start": "@formatDateTime(items('Apply_to_each_task')?['dueDateTime'], 'yyyy-MM-ddT00:00:00')",
+                          "item/end": "@formatDateTime(addDays(items('Apply_to_each_task')?['dueDateTime'], 1), 'yyyy-MM-ddT00:00:00')",
+                          "item/timeZone": "(UTC+01:00) Sarajevo, Skopje, Warsaw, Zagreb",
+                          "item/body": "<p class=\"editor-paragraph\">@{outputs('Compose_Description')}</p>",
+                          "item/isAllDay": true,
+                          "item/showAs": "busy"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                          "operationId": "V4CalendarPostItem",
+                          "connectionName": "shared_office365"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Compose_Description": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Create_event_(V4)": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "table": "YOUR_CALENDAR_ID",
+                            "item/subject": "@outputs('Compose_Subject')",
+                            "item/start": "@formatDateTime(items('Apply_to_each_task')?['dueDateTime'], 'yyyy-MM-ddT00:00:00')",
+                            "item/end": "@formatDateTime(addDays(items('Apply_to_each_task')?['dueDateTime'], 1), 'yyyy-MM-ddT00:00:00')",
+                            "item/timeZone": "(UTC+01:00) Sarajevo, Skopje, Warsaw, Zagreb",
+                            "item/body": "<p class=\"editor-paragraph\">@{outputs('Compose_Description')}</p>",
+                            "item/isAllDay": true,
+                            "item/showAs": "busy"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "V4CalendarPostItem",
+                            "connectionName": "shared_office365"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@outputs('Compose_EventId')",
+                            ""
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {
+                "Compose_EventId": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Condition_-_orphaned_event_exists": {
+                    "actions": {
+                      "Delete_orphaned_event": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "calendar": "YOUR_CALENDAR_ID",
+                            "event": "@outputs('Compose_EventId')"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                            "operationId": "CalendarDeleteItem_V2",
+                            "connectionName": "shared_office365"
+                          }
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "expression": {
+                      "and": [
+                        {
+                          "not": {
+                            "equals": [
+                              "@outputs('Compose_EventId')",
+                              ""
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "type": "If"
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@items('Apply_to_each_task')?['dueDateTime']",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Parse_events_response": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

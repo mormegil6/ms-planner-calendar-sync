@@ -1,0 +1,183 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_b355d"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "reset-0001-0001-0001-000000000001"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        }
+      },
+      "actions": {
+        "Initialize_Deleted_Events_Count": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DeletedEventsCount",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "Get_calendar_events_via_HTTP": {
+          "runAfter": {
+            "Initialize_Deleted_Events_Count": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "Uri": "https://graph.microsoft.com/v1.0/me/calendars/YOUR_CALENDAR_ID/events?$top=999&$select=id,subject,body",
+              "Method": "GET",
+              "ContentType": "application/json"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "operationId": "HttpRequest",
+              "connectionName": "shared_office365"
+            }
+          }
+        },
+        "Parse_events_response": {
+          "runAfter": {
+            "Get_calendar_events_via_HTTP": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_calendar_events_via_HTTP')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Filter_synced_events": {
+          "runAfter": {
+            "Parse_events_response": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Parse_events_response')?['value']",
+            "where": "@or(contains(coalesce(item()?['subject'], ''), 'Zadanie'), contains(coalesce(item()?['body']?['content'], ''), '/Home/Task/'))"
+          }
+        },
+        "Apply_to_each_event_-_delete": {
+          "foreach": "@body('Filter_synced_events')",
+          "actions": {
+            "Delete_event": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "calendar": "YOUR_CALENDAR_ID",
+                  "event": "@items('Apply_to_each_event_-_delete')?['id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "operationId": "CalendarDeleteItem_V2",
+                  "connectionName": "shared_office365"
+                }
+              }
+            },
+            "Increment_Deleted_Events": {
+              "runAfter": {
+                "Delete_event": [
+                  "Succeeded"
+                ]
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "DeletedEventsCount",
+                "value": 1
+              }
+            }
+          },
+          "runAfter": {
+            "Filter_synced_events": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Compose_Summary": {
+          "runAfter": {
+            "Apply_to_each_event_-_delete": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@concat('🔄 Reset zakończony. Usunięto wydarzeń: ', string(variables('DeletedEventsCount')), '.')"
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

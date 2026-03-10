@@ -1,0 +1,61 @@
+<ImportExportXml version="9.2.26022.162" SolutionPackageVersion="9.2" languagecode="1045" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26022.162" OrganizationSchemaType="Standard" CRMServerServiceabilityVersion="9.2.26022.00162">
+  <SolutionManifest>
+    <UniqueName>KNIDiOGroupCalendarSync</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="KNIDiO Group Calendar Sync" languagecode="1045" />
+    </LocalizedNames>
+    <Descriptions />
+    <Version>1.0.0.43</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>DefaultPublisher</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="Default Publisher" languagecode="1045" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="Default Publisher" languagecode="1045" />
+      </Descriptions>
+      <EMailAddress></EMailAddress>
+      <SupportingWebsiteUrl></SupportingWebsiteUrl>
+      <CustomizationPrefix>new</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
+      <Addresses>
+        <Address>
+          <AddressNumber>1</AddressNumber>
+          <AddressTypeCode>1</AddressTypeCode>
+          <City></City>
+          <County></County>
+          <Country></Country>
+          <Fax xsi:nil="true"></Fax>
+          <FreightTermsCode xsi:nil="true"></FreightTermsCode>
+          <ImportSequenceNumber xsi:nil="true"></ImportSequenceNumber>
+          <Latitude xsi:nil="true"></Latitude>
+          <Line1 xsi:nil="true"></Line1>
+          <Line2 xsi:nil="true"></Line2>
+          <Line3 xsi:nil="true"></Line3>
+          <Longitude xsi:nil="true"></Longitude>
+          <Name xsi:nil="true"></Name>
+          <PostalCode></PostalCode>
+          <PostOfficeBox xsi:nil="true"></PostOfficeBox>
+          <PrimaryContactName xsi:nil="true"></PrimaryContactName>
+          <ShippingMethodCode xsi:nil="true"></ShippingMethodCode>
+          <StateOrProvince></StateOrProvince>
+          <Telephone1 xsi:nil="true"></Telephone1>
+          <Telephone2 xsi:nil="true"></Telephone2>
+          <Telephone3 xsi:nil="true"></Telephone3>
+          <TimeZoneRuleVersionNumber xsi:nil="true"></TimeZoneRuleVersionNumber>
+          <UPSZone xsi:nil="true"></UPSZone>
+          <UTCOffset xsi:nil="true"></UTCOffset>
+          <UTCConversionTimeZoneCode xsi:nil="true"></UTCConversionTimeZoneCode>
+        </Address>
+      </Addresses>
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="29" id="{5ba54232-481a-f111-8341-7ced8d8db1d3}" behavior="0" />
+      <RootComponent type="29" id="{a1b2c3d4-e5f6-7890-abcd-ef1234567890}" behavior="0" />
+      <RootComponent type="29" id="{00000001-0000-0000-0000-000000000000}" behavior="0" />
+      <RootComponent type="29" id="{7c8d9e0f-1a2b-3c4d-5e6f-7g8h9i0j1k2l}" behavior="0" />
+    </RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>

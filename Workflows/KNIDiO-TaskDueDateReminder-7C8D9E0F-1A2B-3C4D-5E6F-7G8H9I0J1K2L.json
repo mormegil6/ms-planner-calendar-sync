@@ -1,0 +1,281 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_planner": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedplanner_0a21b"
+        },
+        "api": {
+          "name": "shared_planner"
+        }
+      },
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedteams_teams_ref"
+        },
+        "api": {
+          "name": "shared_teams"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Day",
+            "timeZone": "Central European Standard Time",
+            "schedule": {
+              "hours": [
+                "9"
+              ]
+            }
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "List_tasks_in_plan": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "c3000000-0003-0001-0001-000000000001"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "groupId": "YOUR_GROUP_OR_TEAM_ID",
+              "id": "YOUR_PLAN_ID"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+              "operationId": "ListTasks_V3",
+              "connectionName": "shared_planner"
+            }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Filter_tasks_without_due_date": {
+          "runAfter": {
+            "List_tasks_in_plan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('List_tasks_in_plan')?['body/value']",
+            "where": "@and(not(equals(item()?['bucketId'], 'YOUR_RESERVE_BUCKET_ID')), equals(coalesce(item()?['dueDateTime'], ''), ''))"
+          }
+        },
+        "Apply_to_each_task_no_due_date": {
+          "foreach": "@body('Filter_tasks_without_due_date')",
+          "actions": {
+            "Get_task_details": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@items('Apply_to_each_task_no_due_date')?['id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+                  "operationId": "GetTaskDetails_V2",
+                  "connectionName": "shared_planner"
+                }
+              }
+            },
+            "Check_has_assignments": {
+              "runAfter": {
+                "Get_task_details": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Condition",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Get_task_details')?['body/assignments']",
+                        "@null"
+                      ]
+                    }
+                  },
+                  {
+                    "greater": [
+                      "@length(coalesce(outputs('Get_task_details')?['body/assignments'], json('{}')))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Get_assignee_id": {
+                  "type": "Compose",
+                  "inputs": "@first(keys(outputs('Get_task_details')?['body/assignments']))"
+                },
+                "Compose_message": {
+                  "runAfter": {
+                    "Get_assignee_id": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@concat('[Wiadomość automatyczna] 📌 @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_task_no_due_date')?['title'], '\" zostało przypisane i brakuje terminu wykonania. Proszę dodaj termin do tego zadania w Plannerze.')"
+                },
+                "Send_Teams_reminder": {
+                  "runAfter": {
+                    "Compose_message": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "team_id": "YOUR_GROUP_OR_TEAM_ID",
+                      "channel_id": "YOUR_CHANNEL_ID",
+                      "body/messageBody": "@outputs('Compose_message')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                      "operationId": "PostMessageToTeamChannel",
+                      "connectionName": "shared_teams"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          },
+          "runAfter": {
+            "Filter_tasks_without_due_date": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Filter_completed_tasks_in_wrong_bucket": {
+          "runAfter": {
+            "Filter_tasks_without_due_date": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('List_tasks_in_plan')?['body/value']",
+            "where": "@and(not(equals(item()?['bucketId'], 'YOUR_DONE_BUCKET_ID')), equals(int(coalesce(item()?['percentComplete'], 0)), 100))"
+          }
+        },
+        "Apply_to_each_completed_task": {
+          "foreach": "@body('Filter_completed_tasks_in_wrong_bucket')",
+          "actions": {
+            "Get_completed_task_details": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@items('Apply_to_each_completed_task')?['id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
+                  "operationId": "GetTaskDetails_V2",
+                  "connectionName": "shared_planner"
+                }
+              }
+            },
+            "Check_completed_has_owner": {
+              "runAfter": {
+                "Get_completed_task_details": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Condition",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Get_completed_task_details')?['body/assignments']",
+                        "@null"
+                      ]
+                    }
+                  },
+                  {
+                    "greater": [
+                      "@length(coalesce(outputs('Get_completed_task_details')?['body/assignments'], json('{}')))",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Compose_completion_message": {
+                  "type": "Compose",
+                  "inputs": "@concat('[Wiadomość automatyczna] ✅ @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_completed_task')?['title'], '\" zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w innej kolumnie. Proszę przenieś je do \"✅ Zrobione\" w Plannerze.')"
+                },
+                "Send_completion_reminder": {
+                  "runAfter": {
+                    "Compose_completion_message": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "team_id": "YOUR_GROUP_OR_TEAM_ID",
+                      "channel_id": "YOUR_CHANNEL_ID",
+                      "body/messageBody": "@outputs('Compose_completion_message')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                      "operationId": "PostMessageToTeamChannel",
+                      "connectionName": "shared_teams"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          },
+          "runAfter": {
+            "Apply_to_each_task_no_due_date": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
