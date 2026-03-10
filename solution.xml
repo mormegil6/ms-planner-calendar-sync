@@ -5,7 +5,7 @@
       <LocalizedName description="KNIDiO Group Calendar Sync" languagecode="1045" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.46</Version>
+    <Version>1.0.0.47</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>DefaultPublisher</UniqueName>

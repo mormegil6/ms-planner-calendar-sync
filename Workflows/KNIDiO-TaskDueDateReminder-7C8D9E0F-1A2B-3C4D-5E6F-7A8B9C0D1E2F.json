@@ -87,83 +87,30 @@
         "Apply_to_each_task_no_due_date": {
           "foreach": "@body('Filter_tasks_without_due_date')",
           "actions": {
-            "Get_task_details": {
-              "type": "OpenApiConnection",
-              "inputs": {
-                "parameters": {
-                  "id": "@items('Apply_to_each_task_no_due_date')?['id']"
-                },
-                "host": {
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
-                  "operationId": "GetTaskDetails_V2",
-                  "connectionName": "shared_planner"
-                }
-              }
+            "Compose_message": {
+              "type": "Compose",
+              "inputs": "@concat('[Wiadomość automatyczna] 📌 @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_task_no_due_date')?['title'], '\" nie ma ustawionego terminu wykonania. Proszę dodaj termin do tego zadania w Plannerze.')"
             },
-            "Check_has_assignments": {
+            "Send_Teams_reminder": {
               "runAfter": {
-                "Get_task_details": [
+                "Compose_message": [
                   "Succeeded"
                 ]
               },
-              "type": "If",
-              "expression": {
-                "and": [
-                  {
-                    "not": {
-                      "equals": [
-                        "@outputs('Get_task_details')?['body/assignments']",
-                        "@null"
-                      ]
-                    }
-                  },
-                  {
-                    "greater": [
-                      "@length(coalesce(outputs('Get_task_details')?['body/assignments'], json('{}')))",
-                      0
-                    ]
-                  }
-                ]
-              },
-              "actions": {
-                "Get_assignee_id": {
-                  "type": "Compose",
-                  "inputs": "@first(keys(outputs('Get_task_details')?['body/assignments']))"
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
+                  "body/recipient/channelId": "YOUR_CHANNEL_ID",
+                  "body/messageBody": "@outputs('Compose_message')"
                 },
-                "Compose_message": {
-                  "runAfter": {
-                    "Get_assignee_id": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "Compose",
-                  "inputs": "@concat('[Wiadomość automatyczna] 📌 @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_task_no_due_date')?['title'], '\" zostało przypisane i brakuje terminu wykonania. Proszę dodaj termin do tego zadania w Plannerze.')"
-                },
-                "Send_Teams_reminder": {
-                  "runAfter": {
-                    "Compose_message": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "parameters": {
-                      "poster": "Flow bot",
-                      "location": "Channel",
-                      "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                      "body/recipient/channelId": "YOUR_CHANNEL_ID",
-                      "body/messageBody": "@outputs('Compose_message')"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-                      "operationId": "PostMessageToConversation",
-                      "connectionName": "shared_teams"
-                    }
-                  }
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "connectionName": "shared_teams"
                 }
-              },
-              "else": {
-                "actions": {}
               }
             }
           },
@@ -194,74 +141,30 @@
         "Apply_to_each_completed_task": {
           "foreach": "@body('Filter_completed_tasks_in_wrong_bucket')",
           "actions": {
-            "Get_completed_task_details": {
-              "type": "OpenApiConnection",
-              "inputs": {
-                "parameters": {
-                  "id": "@items('Apply_to_each_completed_task')?['id']"
-                },
-                "host": {
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_planner",
-                  "operationId": "GetTaskDetails_V2",
-                  "connectionName": "shared_planner"
-                }
-              }
+            "Compose_completion_message": {
+              "type": "Compose",
+              "inputs": "@concat('[Wiadomość automatyczna] ✅ @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_completed_task')?['title'], '\" zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w innej kolumnie. Proszę przenieś je do \"✅ Zrobione\" w Plannerze.')"
             },
-            "Check_completed_has_owner": {
+            "Send_completion_reminder": {
               "runAfter": {
-                "Get_completed_task_details": [
+                "Compose_completion_message": [
                   "Succeeded"
                 ]
               },
-              "type": "If",
-              "expression": {
-                "and": [
-                  {
-                    "not": {
-                      "equals": [
-                        "@outputs('Get_completed_task_details')?['body/assignments']",
-                        "@null"
-                      ]
-                    }
-                  },
-                  {
-                    "greater": [
-                      "@length(coalesce(outputs('Get_completed_task_details')?['body/assignments'], json('{}')))",
-                      0
-                    ]
-                  }
-                ]
-              },
-              "actions": {
-                "Compose_completion_message": {
-                  "type": "Compose",
-                  "inputs": "@concat('[Wiadomość automatyczna] ✅ @Zarząd Przypomnenie: Zadanie \"', items('Apply_to_each_completed_task')?['title'], '\" zostało oznaczone jako gotowe (100%), ale wciąż znajduje się w innej kolumnie. Proszę przenieś je do \"✅ Zrobione\" w Plannerze.')"
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
+                  "body/recipient/channelId": "YOUR_CHANNEL_ID",
+                  "body/messageBody": "@outputs('Compose_completion_message')"
                 },
-                "Send_completion_reminder": {
-                  "runAfter": {
-                    "Compose_completion_message": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "parameters": {
-                      "poster": "Flow bot",
-                      "location": "Channel",
-                      "body/recipient/groupId": "YOUR_GROUP_OR_TEAM_ID",
-                      "body/recipient/channelId": "YOUR_CHANNEL_ID",
-                      "body/messageBody": "@outputs('Compose_completion_message')"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-                      "operationId": "PostMessageToConversation",
-                      "connectionName": "shared_teams"
-                    }
-                  }
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "connectionName": "shared_teams"
                 }
-              },
-              "else": {
-                "actions": {}
               }
             }
           },
