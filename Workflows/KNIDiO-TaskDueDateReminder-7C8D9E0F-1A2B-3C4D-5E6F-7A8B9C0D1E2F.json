@@ -106,7 +106,7 @@
                   "Succeeded"
                 ]
               },
-              "type": "Condition",
+              "type": "If",
               "expression": {
                 "and": [
                   {
@@ -211,7 +211,7 @@
                   "Succeeded"
                 ]
               },
-              "type": "Condition",
+              "type": "If",
               "expression": {
                 "and": [
                   {
