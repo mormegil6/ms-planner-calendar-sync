@@ -78,8 +78,8 @@
         <LocalizedName languagecode="1045" description="KNIDiO - Reset Calendar Sync" />
       </LocalizedNames>
     </Workflow>
-    <Workflow WorkflowId="{7c8d9e0f-1a2b-3c4d-5e6f-7g8h9i0j1k2l}" Name="KNIDiO - Task Due Date Reminder">
-      <JsonFileName>/Workflows/KNIDiO-TaskDueDateReminder-7C8D9E0F-1A2B-3C4D-5E6F-7G8H9I0J1K2L.json</JsonFileName>
+    <Workflow WorkflowId="{7c8d9e0f-1a2b-3c4d-5e6f-7a8b9c0d1e2f}" Name="KNIDiO - Task Due Date Reminder">
+      <JsonFileName>/Workflows/KNIDiO-TaskDueDateReminder-7C8D9E0F-1A2B-3C4D-5E6F-7A8B9C0D1E2F.json</JsonFileName>
       <Type>1</Type>
       <Subprocess>0</Subprocess>
       <Category>5</Category>
