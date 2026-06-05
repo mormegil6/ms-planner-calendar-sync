@@ -140,6 +140,10 @@ Keep real tenant identifiers in private configuration or local-only working copi
 - Mark a task complete outside Done bucket and confirm Teams reminder in 🤖 Planner Bot channel.
 - Verify reminder messages show bucket name and clickable task link.
 
+## Support
+
+All questions, comments and insights please address to me via e-mail: bartlomiej.mroz@pg.edu.pl
+
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
